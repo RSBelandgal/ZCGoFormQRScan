@@ -12,10 +12,11 @@
       background: #ffffff;
       color: #000000;
       transition: background 0.3s, color 0.3s;
+      padding: 10px; /* add padding for mobile sides */
     }
     body.dark { background: #121212; color: #f1f1f1; }
 
-    #topHeader { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    #topHeader { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; flex-wrap: wrap; }
     #developer { font-size: 14px; color: #555; }
     body.dark #developer { color: #ccc; }
     #sheetInfo { text-align: right; font-size: 14px; color: #555; }
@@ -28,12 +29,13 @@
     }
     body.dark #sheetInfo #status { color: #80e080; }
 
-    #searchBox { padding: 8px; width: 50%; margin-right: 10px; margin-bottom:10px; }
-    #searchField { padding: 8px; width: 180px; margin-right: 10px; margin-bottom:10px; }
+    #searchBox { padding: 8px; width: 50%; margin-right: 10px; margin-bottom:10px; min-width: 120px; }
+    #searchField { padding: 8px; width: 180px; margin-right: 10px; margin-bottom:10px; min-width: 120px; }
     #searchBtn, #clearBtn, #scanBtn, #uploadBtn, #darkModeBtn { 
       padding: 9px 15px; border: none; color: white; cursor: pointer; margin-bottom:10px; border-radius: 5px;
       transition: background 0.3s, color 0.3s;
       position: relative;
+      white-space: nowrap;
     }
     #searchBtn { background: #4285F4; margin-right: 5px; }
     #searchBtn:hover { background: #357AE8; }
@@ -71,7 +73,7 @@
       gap: 10px;
       margin-top: 10px;
       position: relative;
-      flex-wrap: wrap;
+      flex-wrap: wrap; /* allows wrapping on small screens */
     }
 
     #validatedMsg { 
@@ -81,6 +83,7 @@
       position: absolute;
       left: 50%;
       transform: translateX(-50%);
+      white-space: nowrap;
     }
 
     #fields { margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; border: 1px solid #ddd; }
@@ -103,29 +106,19 @@
     body.dark td { border-color: #555; }
     body.dark tr:hover { background-color: #444; }
 
-    #reader { width: 400px; margin: 15px 0; display: none; }
+    #reader { width: 100%; max-width: 400px; margin: 15px 0; display: none; }
     #uploadQR { display: none; }
 
-    /* Mobile responsive for validated/no record message */
+    /* Mobile responsive tweaks: keep layout same but scale/fix widths */
     @media screen and (max-width: 768px) {
-      #validatedMsg {
-        position: static !important;
-        transform: none !important;
-        display: block;
-        margin-top: 10px;
-        text-align: center;
-      }
-
-      #scanUploadWrap {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-      }
-
-      #searchBox, #searchField, #searchBtn, #clearBtn {
-        width: 100% !important;
-        box-sizing: border-box;
-      }
+      body { padding: 5px; }
+      #searchBox, #searchField { width: auto; max-width: 100%; }
+      #searchBtn, #clearBtn, #scanBtn, #uploadBtn, #darkModeBtn { font-size: 14px; padding: 7px 12px; }
+      #fields { padding: 10px; }
+      #validatedMsg { font-size: 20px; }
+      #reader { max-width: 100%; }
+      #topHeader { flex-direction: column; align-items: flex-start; gap: 5px; }
+      #sheetInfo { text-align: left; margin-top: 5px; }
     }
   </style>
 </head>
@@ -175,9 +168,9 @@
   <div id="counter"></div>
   <div id="results"></div>
 
+  <!-- JS (same as before) -->
   <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-
   <script>
     const apiURL = "https://script.google.com/macros/s/AKfycbzl2hyJ6R807HCLGRZXPgniqPhuHpxJpSIEzy3cXE-W9Otnr6RUGh5L9TxB7OMgns3i/exec";
     let sheetData = [];
