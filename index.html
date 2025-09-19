@@ -12,7 +12,7 @@
       background: #ffffff;
       color: #000000;
       transition: background 0.3s, color 0.3s;
-      padding: 10px; /* add padding for mobile sides */
+      padding: 10px;
     }
     body.dark { background: #121212; color: #f1f1f1; }
 
@@ -109,16 +109,24 @@
     #reader { width: 100%; max-width: 400px; margin: 15px 0; display: none; }
     #uploadQR { display: none; }
 
-    /* Mobile responsive tweaks: keep layout same but scale/fix widths */
+    /* Mobile responsive tweaks */
     @media screen and (max-width: 768px) {
       body { padding: 5px; }
       #searchBox, #searchField { width: auto; max-width: 100%; }
       #searchBtn, #clearBtn, #scanBtn, #uploadBtn, #darkModeBtn { font-size: 14px; padding: 7px 12px; }
       #fields { padding: 10px; }
-      #validatedMsg { font-size: 20px; }
       #reader { max-width: 100%; }
       #topHeader { flex-direction: column; align-items: flex-start; gap: 5px; }
       #sheetInfo { text-align: left; margin-top: 5px; }
+
+      /* Move validated/no record message below buttons and center it on mobile */
+      #validatedMsg {
+        position: static !important;
+        transform: none !important;
+        display: block;
+        margin: 10px auto 0 auto;
+        text-align: center;
+      }
     }
   </style>
 </head>
@@ -167,6 +175,9 @@
 
   <div id="counter"></div>
   <div id="results"></div>
+
+  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
   <!-- JS (same as before) -->
   <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
