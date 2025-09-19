@@ -33,6 +33,7 @@
     #searchBtn, #clearBtn, #scanBtn, #uploadBtn, #darkModeBtn { 
       padding: 9px 15px; border: none; color: white; cursor: pointer; margin-bottom:10px; border-radius: 5px;
       transition: background 0.3s, color 0.3s;
+      position: relative;
     }
     #searchBtn { background: #4285F4; margin-right: 5px; }
     #searchBtn:hover { background: #357AE8; }
@@ -45,30 +46,46 @@
     #darkModeBtn { background: #333; margin-left: 5px; }
     body.dark #darkModeBtn { background: #666; color: #fff; }
 
+    /* Spinner */
+    .spinner {
+      border: 2px solid #f3f3f3; 
+      border-top: 2px solid #fff; 
+      border-radius: 50%;
+      width: 14px;
+      height: 14px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 5px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
     /* Button row */
     #scanUploadWrap {
       display: flex;
-      justify-content: flex-start; /* left-aligned buttons */
+      justify-content: flex-start;
       align-items: center;
       gap: 10px;
       margin-top: 10px;
       position: relative;
+      flex-wrap: wrap;
     }
 
     #validatedMsg { 
       font-weight: bold; 
-      color: green; 
       display: none; 
       font-size: 25px; 
       position: absolute;
       left: 50%;
       transform: translateX(-50%);
     }
-    body.dark #validatedMsg { color: #80e080; }
 
     #fields { margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; border: 1px solid #ddd; }
     body.dark #fields { background: #1e1e1e; border-color: #444; }
-    .field { display: flex; margin-bottom: 6px; }
+    .field { display: flex; margin-bottom: 6px; flex-wrap: wrap; }
     .field-name { font-weight: bold; min-width: 200px; color: #333; white-space: nowrap; }
     body.dark .field-name { color: #ddd; }
     .field-value { flex: 1; color: #555; word-wrap: break-word; }
@@ -89,22 +106,26 @@
     #reader { width: 400px; margin: 15px 0; display: none; }
     #uploadQR { display: none; }
 
-    /* Spinner */
-    .button-spinner {
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-top: 2px solid currentColor;
-      border-radius: 50%;
-      width: 14px;
-      height: 14px;
-      animation: spin 0.6s linear infinite;
-      display: inline-block;
-      vertical-align: middle;
-      margin-left: 5px;
-    }
+    /* Mobile responsive for validated/no record message */
+    @media screen and (max-width: 768px) {
+      #validatedMsg {
+        position: static !important;
+        transform: none !important;
+        display: block;
+        margin-top: 10px;
+        text-align: center;
+      }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      #scanUploadWrap {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+
+      #searchBox, #searchField, #searchBtn, #clearBtn {
+        width: 100% !important;
+        box-sizing: border-box;
+      }
     }
   </style>
 </head>
@@ -167,7 +188,6 @@
     const SEARCHABLE_FIELDS = [ "CONTROL NO", "PIN", "NEW PIN", "APPLICANT NAME", "LOT/SURVEY NO" ];
 
     const dropdown = document.getElementById("searchField");
-    dropdown.innerHTML = '<option value="ALL">All Fields</option>';
     SEARCHABLE_FIELDS.forEach(field => {
       const option = document.createElement("option");
       option.value = field;
@@ -180,18 +200,10 @@
       const scanBtn = document.getElementById("scanBtn");
       const uploadBtn = document.getElementById("uploadBtn");
 
-      // Disable buttons and add spinner
       scanBtn.disabled = true;
       uploadBtn.disabled = true;
-
-      const scanSpinner = document.createElement("span");
-      scanSpinner.className = "button-spinner";
-      scanBtn.appendChild(scanSpinner);
-
-      const uploadSpinner = document.createElement("span");
-      uploadSpinner.className = "button-spinner";
-      uploadBtn.appendChild(uploadSpinner);
-
+      scanBtn.innerHTML = 'Scan QR <span class="spinner"></span>';
+      uploadBtn.innerHTML = 'Upload QR <span class="spinner"></span>';
       statusDiv.textContent = "Loading data please wait…";
 
       try {
@@ -221,11 +233,10 @@
         console.error("Error loading data:", err);
         statusDiv.textContent = "Failed to load data. See console for details.";
       } finally {
-        // Remove spinner and enable buttons
-        scanSpinner.remove();
-        uploadSpinner.remove();
         scanBtn.disabled = false;
         uploadBtn.disabled = false;
+        scanBtn.innerHTML = 'Scan QR';
+        uploadBtn.innerHTML = 'Upload QR';
       }
     }
 
@@ -248,7 +259,6 @@
           }
         }
       });
-      document.getElementById("validatedMsg").style.display = "inline";
     }
 
     function clearFields() {
@@ -256,7 +266,6 @@
         const el = document.getElementById(field);
         if(el) el.textContent = "\u00A0";
       });
-      document.getElementById("validatedMsg").style.display = "none";
     }
 
     function showResults(data) {
@@ -296,6 +305,7 @@
     function clearResults() {
       document.getElementById("results").innerHTML = "";
       document.getElementById("counter").textContent = "";
+      document.getElementById("validatedMsg").style.display = "none";
     }
 
     function runSearch() {
@@ -303,24 +313,32 @@
 
       const query = document.getElementById("searchBox").value.trim().toLowerCase();
       const selectedField = document.getElementById("searchField").value;
+      const validatedMsg = document.getElementById("validatedMsg");
 
       if(!query) {
         clearResults();
         clearFields();
+        validatedMsg.style.display = "none";
         return;
       }
 
       const filtered = sheetData.filter(row => {
-        if (selectedField === "ALL") {
-          return Object.values(row).some(val => String(val).trim().toLowerCase() === query);
-        } else {
-          return row[selectedField] && String(row[selectedField]).trim().toLowerCase() === query;
-        }
+        return row[selectedField] && String(row[selectedField]).trim().toLowerCase() === query;
       });
 
       showResults(filtered);
-      if (filtered.length > 0) fillFields(filtered[0]);
-      else clearFields();
+
+      if (filtered.length > 0) {
+        fillFields(filtered[0]);
+        validatedMsg.textContent = "VALIDATED DATA!";
+        validatedMsg.style.color = "green";
+        validatedMsg.style.display = "inline";
+      } else {
+        clearFields();
+        validatedMsg.textContent = "NO RECORD FOUND!";
+        validatedMsg.style.color = "red";
+        validatedMsg.style.display = "inline";
+      }
     }
 
     function clearSearch() {
