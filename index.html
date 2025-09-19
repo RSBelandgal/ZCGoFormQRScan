@@ -2,14 +2,38 @@
 <html>
 <head>
   <title>Google Sheet Search Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: Arial, sans-serif; max-width: 1000px; margin: 40px auto; position: relative; }
+    body { 
+      font-family: Arial, sans-serif; 
+      max-width: 1000px; 
+      margin: 40px auto; 
+      position: relative;
+      background: #ffffff;
+      color: #000000;
+      transition: background 0.3s, color 0.3s;
+    }
+    body.dark { background: #121212; color: #f1f1f1; }
+
     #topHeader { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
     #developer { font-size: 14px; color: #555; }
+    body.dark #developer { color: #ccc; }
     #sheetInfo { text-align: right; font-size: 14px; color: #555; }
+    body.dark #sheetInfo { color: #bbb; }
+
+    #sheetInfo #status {
+      margin-top: 4px;
+      font-weight: bold;
+      color: green;
+    }
+    body.dark #sheetInfo #status { color: #80e080; }
+
     #searchBox { padding: 8px; width: 50%; margin-right: 10px; margin-bottom:10px; }
     #searchField { padding: 8px; width: 180px; margin-right: 10px; margin-bottom:10px; }
-    #searchBtn, #clearBtn, #scanBtn, #uploadBtn { padding: 9px 15px; border: none; color: white; cursor: pointer; margin-bottom:10px; }
+    #searchBtn, #clearBtn, #scanBtn, #uploadBtn, #darkModeBtn { 
+      padding: 9px 15px; border: none; color: white; cursor: pointer; margin-bottom:10px; border-radius: 5px;
+      transition: background 0.3s, color 0.3s;
+    }
     #searchBtn { background: #4285F4; margin-right: 5px; }
     #searchBtn:hover { background: #357AE8; }
     #clearBtn { background: #f44336; margin-right: 5px; }
@@ -18,25 +42,70 @@
     #scanBtn:hover { background: #45a049; }
     #uploadBtn { background: #FF9800; }
     #uploadBtn:hover { background: #e68900; }
+    #darkModeBtn { background: #333; margin-left: 5px; }
+    body.dark #darkModeBtn { background: #666; color: #fff; }
 
-    /* small wrapper to ensure Scan and Upload stay adjacent */
-    #scanUploadWrap { display: inline-flex; align-items: center; gap: 4px; }
+    /* Button row */
+    #scanUploadWrap {
+      display: flex;
+      justify-content: flex-start; /* left-aligned buttons */
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      position: relative;
+    }
+
+    #validatedMsg { 
+      font-weight: bold; 
+      color: green; 
+      display: none; 
+      font-size: 25px; 
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    body.dark #validatedMsg { color: #80e080; }
 
     #fields { margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; border: 1px solid #ddd; }
+    body.dark #fields { background: #1e1e1e; border-color: #444; }
     .field { display: flex; margin-bottom: 6px; }
     .field-name { font-weight: bold; min-width: 200px; color: #333; white-space: nowrap; }
+    body.dark .field-name { color: #ddd; }
     .field-value { flex: 1; color: #555; word-wrap: break-word; }
+    body.dark .field-value { color: #ccc; }
 
     #counter { margin-top: 10px; font-weight: bold; color: #444; }
-    #status { margin-top: 10px; font-weight: bold; color: green; }
-    #results { margin-top: 10px; border-collapse: collapse; width: 100%; }
+    body.dark #counter { color: #ccc; }
+
+    #results { margin-top: 10px; border-collapse: collapse; width: 100%; overflow-x:auto; }
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1px solid #ddd; padding: 8px; vertical-align: top; word-wrap: break-word; }
     th { background-color: #4285F4; color: white; font-weight: bold; text-align: left; }
     tr:hover { background-color: #e8f0fe; cursor: pointer; }
+    body.dark th { background-color: #333; border-color: #555; }
+    body.dark td { border-color: #555; }
+    body.dark tr:hover { background-color: #444; }
 
     #reader { width: 400px; margin: 15px 0; display: none; }
     #uploadQR { display: none; }
+
+    /* Spinner */
+    .button-spinner {
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top: 2px solid currentColor;
+      border-radius: 50%;
+      width: 14px;
+      height: 14px;
+      animation: spin 0.6s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 5px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -45,6 +114,7 @@
     <div id="sheetInfo">
       <div id="totalRecords">Total Records: 0</div>
       <div id="sheetName">&nbsp;</div>
+      <div id="status">Loading data…</div>
     </div>
   </div>
 
@@ -54,16 +124,15 @@
   <button id="searchBtn">Search</button>
   <button id="clearBtn">Clear</button>
 
-  <!-- Grouped so Upload sits beside Scan (only change made) -->
   <span id="scanUploadWrap">
     <button id="scanBtn">Scan QR</button>
     <button id="uploadBtn">Upload QR</button>
+    <button id="darkModeBtn">🌙 Dark Mode</button>
+    <span id="validatedMsg">VALIDATED DATA!</span>
   </span>
 
   <input type="file" id="uploadQR" accept="image/*">
-
   <div id="reader"></div>
-  <div id="status">Loading data…</div>
 
   <div id="fields">
     <div class="field"><span class="field-name">DATE RECEIPT :</span><span class="field-value" id="DATE RECEIPT">&nbsp;</span></div>
@@ -85,11 +154,10 @@
   <div id="counter"></div>
   <div id="results"></div>
 
-  <!-- QR libraries -->
   <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
-  <script>  
+  <script>
     const apiURL = "https://script.google.com/macros/s/AKfycbzl2hyJ6R807HCLGRZXPgniqPhuHpxJpSIEzy3cXE-W9Otnr6RUGh5L9TxB7OMgns3i/exec";
     let sheetData = [];
     let totalRecords = 0;
@@ -109,7 +177,23 @@
 
     async function loadData() {
       const statusDiv = document.getElementById("status");
+      const scanBtn = document.getElementById("scanBtn");
+      const uploadBtn = document.getElementById("uploadBtn");
+
+      // Disable buttons and add spinner
+      scanBtn.disabled = true;
+      uploadBtn.disabled = true;
+
+      const scanSpinner = document.createElement("span");
+      scanSpinner.className = "button-spinner";
+      scanBtn.appendChild(scanSpinner);
+
+      const uploadSpinner = document.createElement("span");
+      uploadSpinner.className = "button-spinner";
+      uploadBtn.appendChild(uploadSpinner);
+
       statusDiv.textContent = "Loading data please wait…";
+
       try {
         const res = await fetch(apiURL);
         if (!res.ok) throw new Error("HTTP error " + res.status);
@@ -136,6 +220,12 @@
       } catch(err) {
         console.error("Error loading data:", err);
         statusDiv.textContent = "Failed to load data. See console for details.";
+      } finally {
+        // Remove spinner and enable buttons
+        scanSpinner.remove();
+        uploadSpinner.remove();
+        scanBtn.disabled = false;
+        uploadBtn.disabled = false;
       }
     }
 
@@ -158,6 +248,7 @@
           }
         }
       });
+      document.getElementById("validatedMsg").style.display = "inline";
     }
 
     function clearFields() {
@@ -165,6 +256,7 @@
         const el = document.getElementById(field);
         if(el) el.textContent = "\u00A0";
       });
+      document.getElementById("validatedMsg").style.display = "none";
     }
 
     function showResults(data) {
@@ -238,7 +330,7 @@
       document.getElementById("searchBox").focus();
     }
 
-    // ==== QR SCANNER ====
+    // QR Scanner
     function startScanner() {
       const reader = document.getElementById("reader");
       reader.style.display = "block";
@@ -260,11 +352,12 @@
 
     function onScanSuccess(decodedText) {
       document.getElementById("searchBox").value = decodedText;
+      document.getElementById("searchField").value = "CONTROL NO";
       runSearch();
       stopScanner();
     }
 
-    // ==== QR UPLOAD ====
+    // QR Upload
     document.getElementById("uploadBtn").addEventListener("click", () => {
       document.getElementById("uploadQR").click();
     });
@@ -286,6 +379,7 @@
           const code = jsQR(imageData.data, imageData.width, imageData.height);
           if (code) {
             document.getElementById("searchBox").value = code.data;
+            document.getElementById("searchField").value = "CONTROL NO";
             runSearch();
           } else {
             alert("No QR code found in the uploaded image.");
@@ -297,13 +391,36 @@
     });
 
     document.getElementById("scanBtn").addEventListener("click", startScanner);
-
     document.getElementById("searchBtn").addEventListener("click", runSearch);
     document.getElementById("clearBtn").addEventListener("click", clearSearch);
     document.getElementById("searchBox").addEventListener("input", runSearch);
     document.getElementById("searchBox").addEventListener("keypress", e => {
       if(e.key === "Enter") { e.preventDefault(); runSearch(); }
     });
+
+    // Dark Mode
+    const darkModeBtn = document.getElementById("darkModeBtn");
+    function setDarkMode(enabled) {
+      if (enabled) {
+        document.body.classList.add("dark");
+        darkModeBtn.textContent = "☀️ Light Mode";
+      } else {
+        document.body.classList.remove("dark");
+        darkModeBtn.textContent = "🌙 Dark Mode";
+      }
+    }
+    darkModeBtn.addEventListener("click", () => {
+      setDarkMode(!document.body.classList.contains("dark"));
+      localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+    });
+
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const savedDark = localStorage.getItem("darkMode");
+    if (savedDark !== null) {
+      setDarkMode(savedDark === "true");
+    } else {
+      setDarkMode(prefersDark);
+    }
 
     loadData();
   </script>
